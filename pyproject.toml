@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "octopus-viz"
+version = "0.0.0"
+description = "Visualisation tool for data from the Octopus Energy API."
+authors = ["Thomas Richard <thomrich0@gmail.com>"]
+readme = "README.md"
+packages = [{include = "octopus_viz"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+requests = "*"
+pytz = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+
+[tool.poetry.scripts]
+octopus-raw-usage = "octopus_viz.cli.raw_consumption:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
