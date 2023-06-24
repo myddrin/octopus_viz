@@ -11,12 +11,14 @@ python = "^3.10"
 
 requests = "*"
 pytz = "*"
+plotly = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
 
 [tool.poetry.scripts]
 octopus-raw-usage = "octopus_viz.cli.raw_consumption:main"
+octopus-viz = "octopus_viz.cli.viz_consumption:main"
 
 [build-system]
 requires = ["poetry-core"]

@@ -3,6 +3,7 @@ import logging
 from operator import attrgetter
 from typing import Optional, Iterable
 
+from octopus_viz.cli.utils import add_common_aggregate_args
 from octopus_viz.octopus_client import dto
 from octopus_viz.octopus_client.api import Config, get_consumption_data
 from octopus_viz.viz.aggregator import aggregate_by_period
@@ -62,25 +63,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Raw access to the consumption of all configured meters.',
     )
-    parser.add_argument(
-        '--period-from', type=str, default=None,
-        help='Period start (inclusive). Need to specify --period-to',
-    )
-    parser.add_argument(
-        '--period-to', type=str, default=None,
-        help='Period end (exclusive). Need to specify --period-from',
-    )
-    parser.add_argument(
-        '--aggregate-format', type=str, default='%H:%M',
-        help='A strftime format to use for the aggregation of the data. Default is %(default)s=by period',
-    )
-    parser.add_argument(
-        'config_filename', type=str,
-        help='Path to the configuration file',
-    )
-    parser.add_argument(
-        '--verbose', '-v', action='store_true',
-    )
+    add_common_aggregate_args(parser)
     args = parser.parse_args()
 
     if args.verbose:
