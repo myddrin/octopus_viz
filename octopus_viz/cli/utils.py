@@ -1,4 +1,8 @@
 import argparse
+from datetime import datetime
+
+
+today = datetime.utcnow()
 
 
 def add_common_aggregate_args(parser: argparse.ArgumentParser):
@@ -12,7 +16,10 @@ def add_common_aggregate_args(parser: argparse.ArgumentParser):
     )
     parser.add_argument(
         '--aggregate-format', type=str, default='%H:%M',
-        help='A strftime format to use for the aggregation of the data. Default is %(default)s=by period',
+        help=(
+            'A strftime format to use for the aggregation of the data. '
+            'Default is "%(default)s" which means by half-hour period'
+        ),
     )
     parser.add_argument(
         'config_filename', type=str,
