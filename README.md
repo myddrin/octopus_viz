@@ -1,3 +1,7 @@
+# !!! THIS IS A PROTOTYPE !!!
+
+Now that you've been warned, let's continue.
+
 # Octopus Viz
 
 The current Octopus App (v3.71.2 on Android) does not allow visualisation:
@@ -11,7 +15,8 @@ The goal of this project is to:
   - to visualise the price of export per a period
   - to visualise the usage by half-hour aggregates over longer periods than 1 day
 
-Octopus API documentation: https://developer.octopus.energy/docs/api
+Octopus Energy API documentation: https://developer.octopus.energy/docs/api/
+Octopus Energy Developer Dashboard: https://octopus.energy/dashboard/developer/
 
 ## Why a cache?
 
