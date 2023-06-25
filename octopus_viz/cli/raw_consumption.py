@@ -1,61 +1,78 @@
 import argparse
 import logging
 from operator import attrgetter
-from typing import Optional, Iterable
+from typing import Iterable
 
 from octopus_viz.cli.utils import add_common_aggregate_args
 from octopus_viz.octopus_client import dto
-from octopus_viz.octopus_client.api import Config, get_consumption_data
+from octopus_viz.octopus_client.api import get_consumption_data
+from octopus_viz.octopus_client.dto import Meter
 from octopus_viz.viz.aggregator import aggregate_by_period
 
 
 def console_lines(
-    consumption: list[dto.Consumption],
+    conso_prices: list[dto.ConsumptionPrice],
     aggregate_format: str,
     *,
-    config: Config,
+    meter: Meter,
     top_n: int = 5,
     bottom_n: int = 5,
 ) -> Iterable[str]:
-    start_period = min(consumption, key=attrgetter('interval_start')).interval_start
-    end_period = max(consumption, key=attrgetter('interval_end')).interval_end
+    start_period = min(conso_prices, key=attrgetter('consumption.interval_start')).consumption.interval_start
+    end_period = max(conso_prices, key=attrgetter('consumption.interval_end')).consumption.interval_end
 
-    ordered_consumption = sorted(consumption, key=attrgetter('consumption'))
+    ordered_consumption = sorted(conso_prices, key=attrgetter('consumption.consumption'))
     top_consumption = {
-        f'{data_point.consumption:0.3f}'
+        f'{data_point.consumption.consumption:0.3f}'
         for data_point in ordered_consumption[-top_n:]
     }
     bottom_consumption = {
-        f'{data_point.consumption:0.3f}'
+        f'{data_point.consumption.consumption:0.3f}'
         for data_point in ordered_consumption[:bottom_n]
     }
-    if config.unit.direction == dto.Direction.importing:
+    if meter.unit.direction == dto.Direction.importing:
         label = 'consumption'
-    elif config.unit.direction == dto.Direction.exporting:
+    elif meter.unit.direction == dto.Direction.exporting:
         label = 'generation'
     else:
-        raise ValueError(f'Unexpected {config.unit.direction}')
+        raise ValueError(f'Unexpected {meter.unit.direction}')
 
-    yield f'{label.title()} for {config.label()} {start_period} <= UTC < {end_period}'
+    yield f'{label.title()} for {meter.label()} {start_period} <= UTC < {end_period}'
     yield f'{top_consumption=}'
     yield f'{bottom_consumption=}'
-    total = 0.0
-    for data_point in consumption:
-        when: str = data_point.interval_start.strftime(aggregate_format)
-        conso_str = f'{data_point.consumption:0.3f}'
+    total_kwh = 0.0
+    total_money = 0.0
+    currency = None
+    for data_point in conso_prices:
+        when: str = data_point.consumption.interval_start.strftime(aggregate_format)
+        conso_str = f'{data_point.consumption.consumption:0.3f}'
         notes = ''
         if conso_str in top_consumption:
             notes = f' <= HIGH {label.upper()}'
         elif conso_str in bottom_consumption:
             notes = f' <= LOW {label.upper()}'
 
-        yield f'{when}: {conso_str}{data_point.unit.metric_unit.value}{notes}'
-        total += data_point.consumption
+        if data_point.price:
+            price_info = f' {data_point.price:0.2f} {data_point.currency}'
+        else:
+            price_info = ''
+
+        yield f'{when}: {conso_str}{data_point.consumption.unit.metric_unit.value}{price_info}{notes}'
+        total_kwh += data_point.consumption.consumption
+        total_money += data_point.price
+        if currency is None:
+            currency = data_point.currency
+
+    if currency is not None:
+        currency_info = f'{total_money:0.2f} {currency}'
+    else:
+        currency_info = ''
 
     yield (
-        f'Total {label} for {config.label()} '
+        f'Total {label} for {meter.label()} '
         f'{start_period} <= UTC < {end_period} '
-        f'is {total:0.3f}{config.unit.metric_unit.value}'
+        f'is {total_kwh:0.3f}{meter.unit.metric_unit.value} '
+        f'{currency_info}'
     )
 
 
@@ -71,13 +88,19 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    configs = Config.from_json(args.config_filename)
+    config = dto.Config.from_json(args.config_filename)
 
-    for cfg in configs:
-        raw_data = aggregate_by_period(
-            get_consumption_data(args.period_from, args.period_to, config=cfg),
+    for meter in config.meters:
+        raw_data = get_consumption_data(args.period_from, args.period_to, meter=meter)
+        data = aggregate_by_period(
+            raw_data,
             interval_start_fmt=args.aggregate_format,
+            tariffs=config.tariffs.get(meter.unit, []),
         )
 
-        for line in console_lines(raw_data, args.aggregate_format, config=cfg):
+        for line in console_lines(data, args.aggregate_format, meter=meter):
             print(line)
+
+
+if __name__ == '__main__':
+    main()
