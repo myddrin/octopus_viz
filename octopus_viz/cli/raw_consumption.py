@@ -1,19 +1,19 @@
 import argparse
 import logging
 from operator import attrgetter
-from typing import Iterable
+from typing import Iterable, Callable
 
-from octopus_viz.cli.utils import add_common_aggregate_args
+from octopus_viz.cli.utils import add_common_aggregate_args, label_by_period_gen, label_by_rate, label_by_tariff_gen
 from octopus_viz.octopus_client import dto
 from octopus_viz.octopus_client.api import get_consumption_data
 from octopus_viz.octopus_client.dto import Meter
-from octopus_viz.viz.aggregator import aggregate_by_period
+from octopus_viz.viz.aggregator import aggregate_by_period, aggregate_by_tariff
 
 
 def console_lines(
     conso_prices: list[dto.ConsumptionPrice],
-    aggregate_format: str,
     *,
+    label_gen: Callable[[dto.ConsumptionPrice], str],
     meter: Meter,
     top_n: int = 5,
     bottom_n: int = 5,
@@ -44,12 +44,12 @@ def console_lines(
     total_money = 0.0
     currency = None
     for data_point in conso_prices:
-        when: str = data_point.consumption.interval_start.strftime(aggregate_format)
+        point_label: str = label_gen(data_point)
         conso_str = f'{data_point.consumption.consumption:0.3f}'
         notes = ''
-        if conso_str in top_consumption:
+        if conso_str in top_consumption and top_n > 0:
             notes = f' <= HIGH {label.upper()}'
-        elif conso_str in bottom_consumption:
+        elif conso_str in bottom_consumption and bottom_n > 0:
             notes = f' <= LOW {label.upper()}'
 
         if data_point.price:
@@ -57,7 +57,7 @@ def console_lines(
         else:
             price_info = ''
 
-        yield f'{when}: {conso_str}{data_point.consumption.unit.metric_unit.value}{price_info}{notes}'
+        yield f'{point_label}: {conso_str}{data_point.consumption.unit.metric_unit.value}{price_info}{notes}'
         total_kwh += data_point.consumption.consumption
         total_money += data_point.price
         if currency is None:
@@ -92,14 +92,25 @@ def main():
 
     for meter in config.meters:
         raw_data = get_consumption_data(args.period_from, args.period_to, meter=meter)
-        data = aggregate_by_period(
-            raw_data,
-            interval_start_fmt=args.aggregate_format,
-            tariffs=config.tariffs.get(meter.unit, []),
-        )
-
-        for line in console_lines(data, args.aggregate_format, meter=meter):
-            print(line)
+        if not args.aggregate_by_tariff:
+            data = aggregate_by_period(
+                raw_data,
+                label_gen=label_by_period_gen(args.aggregate_period_format),
+                tariffs=config.tariffs.get(meter.unit, []),
+            )
+            for line in console_lines(
+                data,
+                label_gen=label_by_period_gen(args.aggregate_period_format),
+                meter=meter,
+            ):
+                print(line)
+        else:
+            data = aggregate_by_tariff(
+                raw_data,
+                tariffs=config.tariffs.get(meter.unit, []),
+            )
+            for line in console_lines(data, label_gen=label_by_tariff_gen(config.all_tariffs), meter=meter, top_n=0, bottom_n=0):
+                print(line)
 
 
 if __name__ == '__main__':

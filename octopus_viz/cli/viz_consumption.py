@@ -1,22 +1,23 @@
 import argparse
 import logging
+from typing import Callable
 
 from plotly import graph_objs as go
 
-from octopus_viz.cli.utils import add_common_aggregate_args
+from octopus_viz.cli.utils import add_common_aggregate_args, label_by_period_gen, \
+    label_by_tariff_gen
 from octopus_viz.octopus_client import dto
 from octopus_viz.octopus_client.api import get_consumption_data
 from octopus_viz.octopus_client.dto import Meter
-from octopus_viz.viz.aggregator import aggregate_by_period
-
+from octopus_viz.viz.aggregator import aggregate_by_period, aggregate_by_tariff
 
 logger = logging.getLogger(__name__)
 
 
 def make_usage_histogram(
     conso_prices: list[dto.ConsumptionPrice],
-    aggregate_format: str,
     *,
+    label_gen: Callable[[dto.ConsumptionPrice], str],
     meter: Meter,
     show_price: bool = False,
 ) -> go.Bar:
@@ -44,7 +45,7 @@ def make_usage_histogram(
     for data_point in conso_prices:
         price.append(data_point.price)
         consumption.append(data_point.consumption.consumption)
-        when.append(data_point.consumption.interval_start.strftime(aggregate_format))
+        when.append(label_gen(data_point))
         custom.append({
             'consumption': data_point.consumption.consumption,
             'unit': data_point.consumption.unit.metric_unit.value,
@@ -104,17 +105,28 @@ def main():
 
     data = []
     for meter in config.meters:
-        raw_data = aggregate_by_period(
-            get_consumption_data(args.period_from, args.period_to, meter=meter),
-            interval_start_fmt=args.aggregate_format,
-            tariffs=config.tariffs.get(meter.unit, []),
-        )
-        data.append(make_usage_histogram(
-            raw_data,
-            args.aggregate_format,
-            meter=meter,
-            show_price=args.show_prices,
-        ))
+        raw_data = get_consumption_data(args.period_from, args.period_to, meter=meter)
+        if not args.aggregate_by_tariff:
+            label_gen = label_by_period_gen(args.aggregate_period_format)
+            agg_data = aggregate_by_period(
+                raw_data,
+                label_gen=label_gen,
+                tariffs=config.tariffs.get(meter.unit, []),
+            )
+            data.append(make_usage_histogram(
+                agg_data,
+                label_gen=label_by_period_gen(args.aggregate_period_format),
+                meter=meter,
+                show_price=args.show_prices,
+            ))
+        else:
+            agg_data = aggregate_by_tariff(raw_data, tariffs=config.tariffs.get(meter.unit, []))
+            data.append(make_usage_histogram(
+                agg_data,
+                label_gen=label_by_tariff_gen(tariffs=config.all_tariffs),
+                meter=meter,
+                show_price=args.show_prices,
+            ))
 
     fig = go.Figure(
         data=data,

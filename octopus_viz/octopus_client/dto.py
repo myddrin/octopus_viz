@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import enum
 import json
+from operator import attrgetter
 from typing import Tuple, Optional, Dict, ClassVar
 
 from octopus_viz.octopus_client import logger
@@ -91,9 +92,10 @@ class PeriodRate:
     interval_start: datetime.timedelta
     interval_end: datetime.timedelta
     rate: float
+    currency: str
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'PeriodRate':
+    def from_dict(cls, data: dict, currency: str) -> 'PeriodRate':
         rate = float(data.pop('rate'))
         interval_start = handle_timedelta(data, 'interval_start')
         interval_end = handle_timedelta(data, 'interval_end')
@@ -102,6 +104,7 @@ class PeriodRate:
             interval_start=interval_start,
             interval_end=interval_end,
             rate=rate,
+            currency=currency,
         )
 
 
@@ -111,11 +114,11 @@ class Tariff:
     name: str
     unit: ConsumptionUnit
     currency: str
-    valid_from: datetime.date
-    valid_until: Optional[datetime.date]
+    valid_from: datetime.date  # inclusive
+    valid_until: Optional[datetime.date]  # exclusive
     rates: list[PeriodRate] = dataclasses.field(default_factory=list)
 
-    def get_rate(self, period_start: datetime.datetime, period_end: datetime.datetime) -> Optional[float]:
+    def get_period_rates(self, period_start: datetime.datetime, period_end: datetime.datetime) -> list[PeriodRate]:
         start = datetime.timedelta(hours=period_start.hour, minutes=period_start.minute)
         end = datetime.timedelta(hours=period_end.hour, minutes=period_end.minute)
         if period_end.date() > period_start.date():
@@ -130,17 +133,21 @@ class Tariff:
                 period.interval_start <= end <= period.interval_end
             ):
                 rates.append(period)
+        return rates
+
+    def get_rate(self, period_start: datetime.datetime, period_end: datetime.datetime) -> Optional[PeriodRate]:
+        rates = self.get_period_rates(period_start, period_end)
 
         if len(rates) > 1:
             logger.warning(f'Too many periods for {period_start} - {period_end}: we use the most expensive')
             if self.unit.direction == Direction.importing:
-                return max((r.rate for r in rates))
+                return sorted(rates, key=attrgetter('rate'))[-1]  # default order is asc
             elif self.unit.direction == Direction.exporting:
-                return min((r.rate for r in rates))
+                return sorted(rates, key=attrgetter('rate'))[0]  # default order is asc
             else:
                 raise ValueError(f'Unsupported {self.unit.direction=}')
         elif rates:
-            return rates[0].rate
+            return rates[0]
 
         return None
 
@@ -161,7 +168,7 @@ class Tariff:
             valid_until = None
 
         rates = [
-            PeriodRate.from_dict(value)
+            PeriodRate.from_dict(value, currency)
             for value in data.pop('rates')
         ]
         return cls(
@@ -251,6 +258,13 @@ class Config:
     meters: list[Meter]
     tariffs: dict[ConsumptionUnit, list[Tariff]]
 
+    @property
+    def all_tariffs(self) -> list[Tariff]:
+        results = []
+        for tariffs in self.tariffs.values():
+            results.extend(tariffs)
+        return results
+
     @classmethod
     def from_json(cls, filename: str) -> 'Config':
         logger.info(f'Loading configuration from "{filename}"')
@@ -280,26 +294,42 @@ class ConsumptionPrice:
     currency: Optional[str]
 
     @classmethod
-    def get_rate(cls, consumption: Consumption, tariffs: list[Tariff]) -> Tuple[float, Optional[str]]:
+    def get_tariff(cls, consumption: Consumption, tariffs: list[Tariff]) -> Optional[Tariff]:
+        consumption_start_date = consumption.interval_start.date()
+        consumption_end_date = consumption.interval_end.date()
         for tariff in tariffs:
             if (
-                tariff.valid_from is None or tariff.valid_from <= consumption.interval_start.date()
+                tariff.valid_from is None or tariff.valid_from <= consumption_start_date
             ) and (
                 # >= because they are both exclusive
-                tariff.valid_until is None or tariff.valid_until >= consumption.interval_end.date()
+                tariff.valid_until is None or tariff.valid_until >= consumption_end_date
             ):
-                rate = tariff.get_rate(consumption.interval_start, consumption.interval_end)
-                if rate is None:
-                    raise ValueError(f'Could not find a price for {consumption} with {tariff}')
-                return rate, tariff.currency
-        return 0.0, None
+                return tariff
+        return None
+
+    @classmethod
+    def get_period_rates(cls, consumption: Consumption, tariffs: list[Tariff]) -> list[PeriodRate]:
+        tariff = cls.get_tariff(consumption, tariffs)
+        if tariff:
+            return tariff.get_period_rates(consumption.interval_start, consumption.interval_end)
+        return []
+
+    @classmethod
+    def get_rate(cls, consumption: Consumption, tariffs: list[Tariff]) -> Optional[PeriodRate]:
+        tariff = cls.get_tariff(consumption, tariffs)
+        if tariff is not None:
+            rate = tariff.get_rate(consumption.interval_start, consumption.interval_end)
+            if rate is None:
+                raise ValueError(f'Could not find a price for {consumption} with {tariff}')
+            return rate
+        return None
 
     @classmethod
     def get_price(cls, consumption: Consumption, tariffs: list[Tariff]) -> Tuple[float, Optional[str]]:
-        rate, currency = cls.get_rate(consumption, tariffs)
-        if currency is None:
-            return rate, currency
-        return consumption.consumption * rate, currency
+        rate = cls.get_rate(consumption, tariffs)
+        if rate is None:
+            return 0.0, None
+        return consumption.consumption * rate.rate, rate.currency
 
     def __add__(self, other: 'ConsumptionPrice'):
         if not isinstance(other, self.__class__):
