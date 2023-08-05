@@ -161,3 +161,9 @@ cython_debug/
 
 # Octopus configuration
 configs/*.json
+
+# Cache in file
+octopus_cache/
+
+# Viz file
+*.html

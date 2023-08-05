@@ -136,7 +136,7 @@ def main():
     )
     if args.output is None:
         logger.info(f'Displaying {len(data)} histograms')
-        fig.show()  # TODO(tr) does not work with my WSL2 setup
+        fig.show()  # TODO(tr) does not work with my WSL2 setup but okay on mac
     else:
         logger.info(f'Writing {len(data)} histograms to {args.output}')
         fig.write_html(args.output)
