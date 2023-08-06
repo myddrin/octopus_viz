@@ -7,7 +7,7 @@ from plotly import graph_objs as go
 from octopus_viz.cli.utils import add_common_aggregate_args, label_by_period_gen, \
     label_by_tariff_gen
 from octopus_viz.octopus_client import dto
-from octopus_viz.octopus_client.api import get_consumption_data
+from octopus_viz.octopus_client.cache import DumbCache
 from octopus_viz.octopus_client.dto import Meter
 from octopus_viz.viz.aggregator import aggregate_by_period, aggregate_by_tariff
 
@@ -102,10 +102,11 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     config = dto.Config.from_json(args.config_filename)
+    cache = DumbCache()
 
     data = []
     for meter in config.meters:
-        raw_data = get_consumption_data(args.period_from, args.period_to, meter=meter)
+        raw_data = cache.get_consumption_data(args.period_from, args.period_to, meter=meter)
         if not args.aggregate_by_tariff:
             label_gen = label_by_period_gen(args.aggregate_period_format)
             agg_data = aggregate_by_period(
