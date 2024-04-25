@@ -1,5 +1,7 @@
 # !!! THIS IS A PROTOTYPE !!!
 
+This runs as a script - a future version will run as a website.
+
 Now that you've been warned, let's continue.
 
 # Octopus Viz [0.1.0]
