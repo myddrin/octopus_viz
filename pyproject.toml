@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "octopus-viz"
-version = "0.0.0"
+version = "0.1.0"
 description = ""
 authors = ["Thomas Richard <thomrich0@gmail.com>"]
 readme = "README.md"
@@ -31,7 +31,7 @@ tag = true
 [[tool.bumpversion.files]]
 filename = "README.md"
 
-[[tool.bumpversion.fils]]
+[[tool.bumpversion.files]]
 filename = "pyproject.toml"
 search = 'version = "{current_version}"'
 replace = 'version = "{new_version}"'
