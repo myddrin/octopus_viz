@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "octopus-viz"
-version = "0.0.0"
-description = "Visualisation tool for data from the Octopus Energy API."
+version = "0.1.0"
+description = ""
 authors = ["Thomas Richard <thomrich0@gmail.com>"]
 readme = "README.md"
 packages = [{include = "octopus_viz"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 
 requests = "*"
 pytz = "*"
@@ -15,6 +15,31 @@ plotly = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
+ruff = "*"
+changelog_gen = {version="~0.9", extras=["bump-my-version"]}
+
+[tool.changelog_gen]
+commit = true
+release = true
+allow_dirty = false
+
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = true
+tag = true
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+
+[[tool.bumpversion.fils]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[tool.pytest.ini_options]
+addopts = [
+  "--random-order"
+]
 
 [tool.poetry.scripts]
 octopus-raw-usage = "octopus_viz.cli.raw_consumption:main"

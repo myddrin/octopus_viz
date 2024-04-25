@@ -2,7 +2,7 @@
 
 Now that you've been warned, let's continue.
 
-# Octopus Viz
+# Octopus Viz [0.1.0]
 
 The current Octopus App (v3.71.2 on Android) does not allow visualisation:
 - of monetary value when using the Flux tariff

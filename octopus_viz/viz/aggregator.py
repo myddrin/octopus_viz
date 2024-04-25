@@ -1,4 +1,4 @@
-from typing import Sequence, List, Dict, Iterable
+from typing import List, Dict, Iterable
 
 from octopus_viz.octopus_client import dto
 
@@ -6,7 +6,7 @@ from octopus_viz.octopus_client import dto
 def aggregate_by_period(
     consumption: Iterable[dto.Consumption],
     *,
-    interval_start_fmt: str = '%H:%M',
+    interval_start_fmt: str = "%H:%M",
     tariffs: list[dto.Tariff] = (),
 ) -> List[dto.ConsumptionPrice]:
     # assumes they are all for the same unit
@@ -29,6 +29,5 @@ def aggregate_by_period(
             present += price_data
 
     return [
-        cache_by_interval_start[key]
-        for key in sorted(cache_by_interval_start.keys())
+        cache_by_interval_start[key] for key in sorted(cache_by_interval_start.keys())
     ]

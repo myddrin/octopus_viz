@@ -161,3 +161,6 @@ cython_debug/
 
 # Octopus configuration
 configs/*.json
+
+.DS_Store
+octopus_cache/*
