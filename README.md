@@ -4,7 +4,7 @@ This runs a Django-based website to display information about energy import and 
 
 Now that you've been warned, let's continue.
 
-# Octopus Viz (Django) [0.1.0]
+# Octopus Viz (Django) [0.2.0]
 
 The current Octopus App (v3.71.2 on Android) does not allow visualisation:
 - of monetary value when using the Flux tariff
