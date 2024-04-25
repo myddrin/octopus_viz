@@ -21,3 +21,41 @@ format:
 
 lint:
 	ruff check --preview octopus_viz
+
+#tests:
+#	pushd octopus_viz/; \
+#	python manage.py test; \
+#	popd
+
+update-db:
+	pushd octopus_viz/; \
+	python manage.py migrate; \
+	popd
+
+#destroy-db:
+#	rm octopus_viz/meter_readings.sqlite3
+
+create-db: update-db
+	pushd octopus_viz/; \
+	python manage.py createsuperuser; \
+	popd
+
+make-migration:
+	pushd octopus_viz/; \
+	python manage.py makemigrations ingestion; \
+	popd
+
+#
+# Help local deployment
+#
+
+make-admin-user:
+	pushd octopus_viz/; \
+	python manage.py createsuperuser; \
+	popd
+
+# run the local server using the manage script form django
+run-local:
+	pushd octopus_viz/; \
+	python manage.py runserver; \
+	popd

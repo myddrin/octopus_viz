@@ -1,10 +1,10 @@
 # !!! THIS IS A PROTOTYPE !!!
 
-This runs as a script - a future version will run as a website.
+This runs a Django-based website to display information about energy import and export.
 
 Now that you've been warned, let's continue.
 
-# Octopus Viz [0.1.0]
+# Octopus Viz (Django) [0.1.0]
 
 The current Octopus App (v3.71.2 on Android) does not allow visualisation:
 - of monetary value when using the Flux tariff
@@ -20,19 +20,55 @@ The goal of this project is to:
 Octopus Energy API documentation: https://developer.octopus.energy/docs/api/
 Octopus Energy Developer Dashboard: https://octopus.energy/dashboard/developer/
 
-## Why a cache?
+## Why storing data from octopus in a database?
 
 The Octopus API allows the gathering of data at the half-hour precision with a maximum of 25,000 entries per page (`2 * 24 * 365 = 17,520` so more than enough to see 1 year of half-hour data).
 
-By using a cache for that data we:
+By using a database for that data we:
 - do not need to use their API for the visualisation part
 - do not risk to get rate-limited if querying multiple time (I'm not sure if any rate limitation applies)
 
-So the cache is lower priority.
+## Visualisation of aggregated data
 
-## Configuration
+The current Octopus App or website allow the visualisation of a day:
+
+![original_consumption.PNG](original_consumption.PNG)
+
+But this project should allow to have this view over longer periods of time than a day still accumulating at the half-hour interval.
+
+TODO(tr) add screenshot of views
+
+## Running the server locally
+
+For the moment I recommend running the server locally as dev mode - this is not a finished project.
+
+Do this once:
+- First edit the Django [settings.py](octopus_viz/octopus_viz/settings.py) (see Appendix)
+- Create the admin user (see below or the Django docs)
+  ```bash
+  $> make create-admin-user
+  ```
+
+Then run the local server:
+```bash
+$> make run-local
+```
+
+To complete the initial setup, visit http://127.0.0.1:8000/admin/ingestion 
+- Add your API key
+- Add your tariffs
+- Add your rates
+
+Alternatively there is a command in the [manage.py](octopus_viz/manage.py) to import a settings file (see Appendix for format).
+
+Afterwards visit http://127.0.0.1:8000/
+
+# Appendices
+
+## Note: configuration file
 
 The configuration files can be stored in `configs/` as it is part of the `.gitignore`.
+This was the old format for the script version - but can still be used to import configuration with a command line.
 
 The format is JSON and should contain:
 - meters: list of `dto.Meter`
@@ -162,67 +198,18 @@ will create:
 
 The `dto.Tariff` has an optional `valid_from`, `valid_until` range that can be used when tariffs are updated.
 
-## Visualisation with `octopus-viz`
+## Modification to Django `settings.py`
 
-The current Octopus App or website allow the visualisation of a day:
+They are already done on the provided [settings.py](octopus_viz/octopus_viz/settings.py) file, but here is a summary:
+- Configure django-bootstrap5
+  - Add `django_bootstrap5` to the `INSTALLED_APPS`
+  - Create `BOOTSTRAP5` in `settings.py` (with values for 'css_url' and 'javascript_url')
+- Add `ingestion.apps.IngestionConfig` to the `INSTALLED_APPS` the usual way
+- Nothing to add to `MIDDLEWARE`
+- Add the menu_context to the `TEMPLATES.OPTIONS.context_processors`
+- Select a path of the sql-lite database
+  - e.g. set `DATABASES.default.NAME` to `BASE_DIR / 'octopus_viz.sqlite3'`
 
-![original_consumption.PNG](original_consumption.PNG)
-
-But this project should allow to have this view over longer periods of time than a day still accumulating at the half-hour interval.
-
-```bash
-$> octopus-viz configs/elec_config.json -o rendered.html --show-price --period-from 2023-06-01
-```
-
-- `configs/elec_config.json` to load the configuration
-- `-o rendered.html` to save the results to an HTML file that can be opened with a browser later
-- `--show-price` to have the graph show the prices, otherwise they will show consumption
-- `--period-from 2023-06-01` respecting the format of the Octopus API
-
-![example_viz.png](example_viz.png)
-
-Use `--help` to know more.
-
-## Data in the command line with `octopus-raw-usage`
-
-This project also include a "raw" visualisation (it will probably be extended to export to JSON or CSV)
-
-It's fairly unreadable but is easy to use to test configuration files. It shows the "top n" (which is 5) time periods
-with high and low consumption/generation.
-
-```bash
-$> octopus-raw-usage configs/elec_config.json --aggregate-format '%H:00'
-```
-```
-INFO:octopus_viz.octopus_client:Loading configuration from "configs/elec_config.json"
-INFO:octopus_viz.octopus_client:Loaded 2 configs and 4 tariffs from "configs/elec_config.json"
-INFO:octopus_viz.octopus_client:Getting data for meter.serial='xxxx' for period_from=None period_to=None
-INFO:octopus_viz.octopus_client:Gathered 2 pages of data for meter.serial='xxxx' for period_from=None period_to=None
-Generation for Solar (exporting) 2023-06-22 00:00:00+00:00 <= UTC < 2023-06-25 00:00:00+00:00
-top_consumption={'4.529', '3.408', '3.014', '3.805', '2.877'}
-bottom_consumption={'0.027', '0.016', '0.026'}
-00:00: 0.031kWh 0.01 GBP
-01:00: 0.026kWh 0.01 GBP <= LOW GENERATION
-(...)
-10:00: 3.014kWh 0.69 GBP <= HIGH GENERATION
-11:00: 3.805kWh 0.87 GBP <= HIGH GENERATION
-12:00: 4.529kWh 1.04 GBP <= HIGH GENERATION
-13:00: 2.877kWh 0.66 GBP <= HIGH GENERATION
-(...)
-23:00: 0.033kWh 0.01 GBP
-Total generation for Solar (exporting) 2023-06-22 00:00:00+00:00 <= UTC < 2023-06-25 00:00:00+00:00 is 25.926kWh 6.04 GBP
-INFO:octopus_viz.octopus_client:Getting data for meter.serial='xxxx' for period_from=None period_to=None
-INFO:octopus_viz.octopus_client:Gathered 37 pages of data for meter.serial='xxxx' for period_from=None period_to=None
-Consumption for Meter xxxx (importing electricity) 2023-04-09 23:30:00+00:00 <= UTC < 2023-06-25 00:00:00+00:00
-top_consumption={'2.335', '1.553', '1.830', '2.486', '2.100'}
-bottom_consumption={'0.197', '0.232', '0.289', '0.382', '0.206'}
-00:00: 0.588kWh 0.20 GBP
-01:00: 0.197kWh 0.07 GBP <= LOW CONSUMPTION
-(...)
-23:00: 2.486kWh 0.84 GBP <= HIGH CONSUMPTION
-Total consumption for Meter xxxx (importing electricity) 2023-04-09 23:30:00+00:00 <= UTC < 2023-06-25 00:00:00+00:00 is 24.754kWh 8.99 GBP
-
-```
 
 ## Note: Octopus Flux
 

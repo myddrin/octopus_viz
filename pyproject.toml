@@ -4,17 +4,19 @@ version = "0.1.0"
 description = ""
 authors = ["Thomas Richard <thomrich0@gmail.com>"]
 readme = "README.md"
-packages = [{include = "octopus_viz"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
 
+Django = "^5.0.3"
 requests = "*"
 pytz = "*"
-plotly = "*"
+django-bootstrap5 = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
+pytest-django = "*"
+pytest-random-order = "*"
 ruff = "*"
 changelog_gen = {version="~0.9", extras=["bump-my-version"]}
 
@@ -40,10 +42,6 @@ replace = 'version = "{new_version}"'
 addopts = [
   "--random-order"
 ]
-
-[tool.poetry.scripts]
-octopus-raw-usage = "octopus_viz.cli.raw_consumption:main"
-octopus-viz = "octopus_viz.cli.viz_consumption:main"
 
 [build-system]
 requires = ["poetry-core"]

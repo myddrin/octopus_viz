@@ -1,0 +1,29 @@
+{% extends "ingestion/base.html" %}
+
+{% block content %}
+
+<div class="row">
+
+{% for card_data in cards %}
+<div class="card" style="width: 18rem">
+    <div class="card-body">
+        <p>{{ card_data.message }}
+        {% if 'tag' in card_data %}
+        <i class="{{ card_data.tag.class }}" style="{{ card_data.tag.css }}"></i>
+        {% endif %}
+        {% if 'link' in card_data %}
+        <a href="{{ card_data.link.url }}" class="{{ card_data.link.class }}">
+            {{ card_data.link.label }}
+        </a>
+        {% endif %}
+        </p>
+    </div>
+</div>
+{% endfor %}
+
+</div>
+<div class="row">
+
+</div>
+
+{% endblock %}

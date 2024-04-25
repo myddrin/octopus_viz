@@ -1,0 +1,117 @@
+{% extends "ingestion/base.html" %}
+{% load i18n %}
+{% load django_bootstrap5 %}
+
+{% block additional_js %}
+    {{ block.super }}
+    <script src="https://cdn.plot.ly/plotly-2.31.1.min.js" charset="utf-8"></script>
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+<form id="graph_form" action="{{ data_url }}" method="get" class="form">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    {% bootstrap_button button_type='submit' content='Search' %}
+</form>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    const no_data_html = $('#no_data_html').html();
+    var submit_button = $('button[type=submit]');
+    var info_table = $('#information');
+    var info_table_body = $('#information_tbody');
+    const button_html = submit_button.html();
+    const loading_results_html = $('#loading_html').html();
+
+    function update_graph(data, textStatus, jqXHR) {
+        console.info('Updating graph with answer status=' + textStatus);
+        // TODO(tr) Handle when there is no data in graph or info
+        Plotly.newPlot('graph', data.graph, data.layout);
+
+        submit_button.html(button_html);
+        submit_button.prop('disabled', false);
+
+        info_table.removeClass('d-none');
+        info_table_body.html('');  // clear
+        info_table_body.append(
+            $.map(
+                data.info,
+                function(ignore, index) {
+                    var row = $('<tr>');
+                    // Use `text()` to avoid injection, which is rather overkill since it's our own API...
+                    row.append($('<td>').text(data.info[index].label));
+                    row.append($('<td>').text(data.info[index].total_consumption));
+                    row.append($('<td>').text(data.info[index].total_price));
+                    return row;
+                }
+            )
+        );
+        if (data.info.length) {
+            $('#information_thead_metric_unit').text(data.info[0].metric_unit);
+            $('#information_thead_currency').text(data.info[0].currency);
+        }
+    }
+
+    function update_no_data(jqXHR, textStatus, errorThrown) {
+        console.error('Data retrieval failed with status=' + textStatus + ' errorThrown=' + errorThrown.toString());
+        console.error(jqXHR.responseText);
+
+        $('#graph').html(no_data_html);
+        $('#information').addClass('d-none');
+
+        submit_button.html(button_html);
+        submit_button.prop('disabled', false);
+    }
+
+    $('#graph_form').submit(function() {
+        console.info('Handling submit for ' + $(this).attr('id'));
+        $.ajax({
+            headers: {
+                Accept: 'application/json',
+            },
+            data: $(this).serialize(),
+            type: $(this).attr('method'),
+            url: $(this).attr('action'),
+            statusCode: {200: update_graph},
+            error: update_no_data,
+        });
+        submit_button.html(loading_results_html);
+        submit_button.prop('disabled', true);  // to avoid multiple requests
+        return false;
+    })
+});
+</script>
+<hr />
+<div class="row">
+    <div id="no_data_html" class="d-none">
+        {# Used as the content of the graph div when nothing is found or an error occurred #}
+        {% translate 'No data found.' %}
+    </div>
+    <div id="loading_html" class="d-none">
+        {# Used as the content of the submit button when loading #}
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        {% translate 'Loading...' %}
+    </div>
+
+    <div id="graph">
+
+    </div>
+</div>
+<div class="row">
+    <table id="information" class="table table-striped d-none">
+        <thead>
+        <tr>
+            <th scope="col">{% translate 'Total' %}</th>
+            <th id="information_thead_metric_unit" scope="col">{% translate 'Metric Unit' %}</th>
+            <th id="information_thead_currency" scope="col">{% translate 'Currency' %}</th>
+        </tr>
+        </thead>
+        <tbody id="information_tbody">
+
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

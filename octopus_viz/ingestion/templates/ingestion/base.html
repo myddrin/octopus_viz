@@ -1,0 +1,86 @@
+{% load i18n %}
+{% load django_bootstrap5 %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+
+    {% bootstrap_css %}
+    {% block additional_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    {% endblock %}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    {% bootstrap_javascript %}
+    {% block additional_js %}
+    {% endblock %}
+</head>
+<body>
+
+{% block navbar %}
+
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'index' %}">
+            {% translate 'Octopus Viz' %}
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'admin:index' %}">
+                        {% translate 'Admin' %}
+                    </a>
+                </li>
+                {# see context_processors.navbar_menu() for the definition #}
+                {% for navbar_item in NAVBAR_MENU %}
+                {% if not navbar_item.submenu %}
+                    <li class="nav-item">
+                        {% if navbar_item.is_active %}
+                            <a class="nav-link active" aria-current="page" href="{{ navbar_item.url }}">{{ navbar_item.label }}</a>
+                        {% else %}
+                            <a class="nav-link" href="{{ navbar_item.url }}">{{ navbar_item.label }}</a>
+                        {% endif %}
+                    </li>
+                {% else %}
+                    <li class="nav-item dropdown">
+                        <!-- TODO(tr) active there too? -->
+                      <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                          {{ navbar_item.label }}
+                      </a>
+                      <ul class="dropdown-menu">
+                      {% for nav_link in navbar_item.submenu %}
+                      {% if nav_link.is_divider %}
+                          <li><hr class="dropdown-divider"></li>
+                      {% else %}
+                          <!-- TODO(tr) active there too? -->
+                          <li><a class="dropdown-item" href="{{ nav_link.url }}">{{ nav_link.label }}</a></li>
+                      {% endif %}
+                      {% endfor %}
+                      </ul>
+                    </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+{% endblock %}
+
+{% block content-title %}
+<h1>{{ title }}</h1>
+{% endblock %}
+
+<div class="container">
+{% block content %}
+
+{% endblock %}
+</div>
+
+</body>
+</html>
