@@ -1,8 +1,10 @@
 import abc
 from datetime import date
 
+from django import urls
 from django.db.models import QuerySet
 from django.http import JsonResponse, HttpRequest
+from django.shortcuts import render
 from django.views import View
 from django.utils.translation import gettext as _
 
@@ -13,6 +15,11 @@ from ingestion.forms.graphs import MonthlyGraphForm
 
 class GraphDataView(abc.ABC):
     def _plotly_layout(self, *, ylabel: str) -> dict:
+        """Build the layout part of the plotly element.
+
+        Expected to be handled as the response part of an ajax request:
+        `Plotly.newPlot('id', data, layout);`
+        """
         # see plot.js documentation
         return {
             'yaxis': {
@@ -21,6 +28,13 @@ class GraphDataView(abc.ABC):
         }
 
     def _plotly_data(self, agg: ConsumptionAggregator, *, label: str, show_price: bool = False) -> dict:
+        """Build one of the data part of the plotly element.
+
+        Expected to be handled as the response part of an ajax request:
+        `Plotly.newPlot('id', [data], layout);`
+
+        Note: the response from this endpoint returns data as a list of data elements.
+        """
         x_axis = []
         y_axis = []
         custom_data = []
@@ -53,6 +67,10 @@ class GraphDataView(abc.ABC):
 
     @classmethod
     def _info_data(cls, agg: ConsumptionAggregator, *, label: str):
+        """Used to build the table info on the page.
+
+        Expected to be used to build the content of a table as part of the ajax response.
+        """
         total_consumption = 0
         total_price = 0
         # derived from data
@@ -143,3 +161,29 @@ class TariffGraphData(View, GraphDataView):
     def get(self, request: HttpRequest):
         form = MonthlyGraphForm(request.GET)
         return JsonResponse(self.process_form(form))
+
+
+class MonthlyConsumptionGraphView(View):
+    def get(self, request: HttpRequest):
+        form = MonthlyGraphForm()
+        return render(
+            request,
+            'ingestion/monthly_graph.html',
+            context={
+                'form': form,
+                'data_url': urls.reverse('monthly_graph_data'),
+            },
+        )
+
+
+class MonthlyTariffGraphView(View):
+    def get(self, request: HttpRequest):
+        form = MonthlyGraphForm()
+        return render(
+            request,
+            'ingestion/monthly_graph.html',
+            context={
+                'form': form,
+                'data_url': urls.reverse('tariff_graph_data'),
+            },
+        )

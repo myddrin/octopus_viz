@@ -1,11 +1,8 @@
-from django import urls
-from django.http import HttpRequest
 from django.shortcuts import render
 from django.views import View
 from django.utils.translation import gettext as _
 
 from ingestion import models
-from ingestion.forms.graphs import MonthlyGraphForm
 
 
 class IndexView(View):
@@ -30,31 +27,5 @@ class IndexView(View):
                     # last entry card? with link to get more from octopus
                     # no current tariff card? with link to add tariff
                 ],
-            },
-        )
-
-
-class MonthlyConsumptionGraphView(View):
-    def get(self, request: HttpRequest):
-        form = MonthlyGraphForm()
-        return render(
-            request,
-            'ingestion/monthly_graph.html',
-            context={
-                'form': form,
-                'data_url': urls.reverse('monthly_graph_data'),
-            },
-        )
-
-
-class MonthlyTariffGraphView(View):
-    def get(self, request: HttpRequest):
-        form = MonthlyGraphForm()
-        return render(
-            request,
-            'ingestion/monthly_graph.html',
-            context={
-                'form': form,
-                'data_url': urls.reverse('tariff_graph_data'),
             },
         )
