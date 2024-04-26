@@ -20,11 +20,11 @@ class MeterFilters:
 
     def get_first_consumption(self) -> datetime | None:
         try:
-            latest = self.filter_consumptions().order_by('interval_start')[0]
+            earliest = self.filter_consumptions().order_by('interval_start')[0]
         except IndexError:
             return None
         else:
-            return latest.earliest
+            return earliest
 
     def get_latest_consumption(self) -> datetime | None:
         try:
@@ -32,4 +32,4 @@ class MeterFilters:
         except IndexError:
             return None
         else:
-            return latest.latest
+            return latest
