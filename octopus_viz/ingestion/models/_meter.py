@@ -31,7 +31,7 @@ class MPAN(models.Model):
         APIKey,
         on_delete=models.SET_NULL,
         null=True,
-        default=None,
+        blank=True,
         help_text='API Key - if absent no new requests to octopus are possible',
     )
 
