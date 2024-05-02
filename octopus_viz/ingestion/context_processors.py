@@ -8,16 +8,12 @@ from ingestion.views.menu import NavbarItem, SubmenuItem
 def navbar_menu(request: HttpRequest) -> dict:
     # TODO(tr) figure out how to do is_active
     menu = [
-        # NavbarItem(
-        #     url=urls.reverse('index'),
-        #     label='Ingestion',
-        # ),
         NavbarItem.build_submenu(
             label=_('Data Visualisation'),
             submenu=[
                 SubmenuItem(
-                    url=urls.reverse('index'),
-                    label=_('Index'),
+                    url=urls.reverse('home'),
+                    label=_('Home'),
                 ),
                 SubmenuItem.build_divider(),
                 SubmenuItem(

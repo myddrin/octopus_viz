@@ -5,11 +5,13 @@ from typing import Tuple
 from django.db import transaction
 from django.db.models import QuerySet, Q
 
-from ingestion import models
+from ._tariff import Tariff, Rate
+from ._enums import Direction
+from ._consumption import Consumption
 
 
-DetachedKey = Tuple[date, date, models.Direction]
-DetachedValues = list[models.Consumption]
+DetachedKey = Tuple[date, date, Direction]
+DetachedValues = list[Consumption]
 
 
 class UpdateConsumption:
@@ -21,7 +23,7 @@ class UpdateConsumption:
 
     @classmethod
     def all_rows(cls) -> QuerySet:
-        return models.Consumption.objects.select_for_update()
+        return Consumption.objects.select_for_update()
 
     @classmethod
     def detached_rows(cls, query: QuerySet | None) -> QuerySet:
@@ -48,14 +50,14 @@ class UpdateConsumption:
         )
 
     @classmethod
-    def related_tariff(cls, valid_from: date, valid_until: date, direction: models.Direction) -> models.Tariff | None:
+    def related_tariff(cls, valid_from: date, valid_until: date, direction: Direction) -> Tariff | None:
         # That did not work anyway
         # return queryset.filter(
         #     tariff__valid_from_lte=F('consumption__interval_start'),
         #     tariff__valid_until_gt=F('consumption__interval_end'),
         # ).values('tariff__id')
         try:
-            return models.Tariff.objects.filter(
+            return Tariff.objects.filter(
                 Q(valid_from__lte=valid_from),
                 Q(valid_until__isnull=True) | Q(valid_until__gte=valid_until),
                 Q(direction=direction),
@@ -64,9 +66,9 @@ class UpdateConsumption:
             return None
 
     @classmethod
-    def related_rates(cls, valid_from: date, valid_until: date, direction: models.Direction) -> QuerySet:
+    def related_rates(cls, valid_from: date, valid_until: date, direction: Direction) -> QuerySet:
         return (
-            models.Rate.objects.select_related('tariff')
+            Rate.objects.select_related('tariff')
             .filter(
                 Q(tariff__valid_from__lte=valid_from),
                 Q(tariff__valid_until__isnull=True) | Q(tariff__valid_until__gte=valid_until),
@@ -75,7 +77,7 @@ class UpdateConsumption:
             .order_by('interval_from', 'interval_end')
         )
 
-    def _update_row(self, row: models.Consumption, tariff: models.Tariff | None, best_rate: models.Rate | None) -> int:
+    def _update_row(self, row: Consumption, tariff: Tariff | None, best_rate: Rate | None) -> int:
         row.tariff = tariff
         if best_rate is None:
             self.logger.warning(f'  No rate found for {row}, setting {tariff=}')
@@ -92,7 +94,7 @@ class UpdateConsumption:
     def _update_detached_rows(self, detached_rows: dict[DetachedKey, DetachedValues]) -> int:
         no_rates = 0
         for key, rows in detached_rows.items():
-            rates: list[models.Rate] = list(self.related_rates(key[0], key[1], key[2]))
+            rates: list[Rate] = list(self.related_rates(key[0], key[1], key[2]))
             if not rates:
                 tariff = self.related_tariff(key[0], key[1], key[2])
             else:
@@ -135,7 +137,7 @@ class UpdateConsumption:
                 consider_rows = self.detached_rows()
 
             found = 0
-            for row in consider_rows:  # type: models.Consumption
+            for row in consider_rows:  # type: Consumption
                 key = row.interval_start.date(), row.interval_end.date(), row.meter.mpan.direction
                 detached_rows.setdefault(key, [])
                 detached_rows[key].append(row)
