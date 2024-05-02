@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 
 from django.db.models import QuerySet, Count, Q
 from django.utils import timezone
@@ -21,21 +21,15 @@ class MeterFilters:
         else:
             raise RuntimeError(f'Unsupported for {self.instance.__class__.__name__}')
 
-    def get_first_consumption(self) -> datetime | None:
-        try:
-            earliest = self.filter_consumptions().order_by('interval_start')[0]
-        except IndexError:
-            return None
-        else:
-            return earliest
+    def get_first_consumption(self) -> Consumption | None:
+        return self.filter_consumptions().order_by('interval_start').first()
 
-    def get_latest_consumption(self) -> datetime | None:
-        try:
-            latest = self.filter_consumptions().order_by('-interval_end')[0]
-        except IndexError:
-            return None
-        else:
-            return latest
+    def get_latest_consumption(self) -> Consumption | None:
+        return self.filter_consumptions().order_by('-interval_end').first()
+
+    @classmethod
+    def meters_with_api_key(cls) -> QuerySet:
+        return Meter.objects.filter(mpan__api_key__isnull=False)
 
 
 class MpanFilters:

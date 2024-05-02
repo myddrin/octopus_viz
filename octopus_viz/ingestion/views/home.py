@@ -36,7 +36,7 @@ class CardInfo:
 
 class HomeView(View):
     def _consumption_cards(self) -> Iterable[CardInfo]:
-        detached_consumption = models.UpdateConsumption.detached_rows(models.Consumption.objects).count()
+        detached_consumption = models.UpdateConsumption.gather_detached_rows(models.Consumption.objects).count()
         if detached_consumption == 0:
             yield CardInfo(_('Found no detached consumption entries')).as_success()
         else:

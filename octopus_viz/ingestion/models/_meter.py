@@ -69,4 +69,4 @@ class Meter(models.Model):
     def __str__(self):
         if self.description:
             return self.description
-        return self.serial
+        return f'{self.serial} ({self.mpan.direction_enum.label})'

@@ -66,9 +66,9 @@ class MPANAdminView(ModelAdmin):
         return format_html(f'<a class="viewlink" href="{url}">{number_of_readings} readings</a>')
 
     @classmethod
-    def last_reading(cls, obj: models.MPAN):
+    def last_reading(cls, obj: models.MPAN) -> models.Consumption:
         # TODO(tr) as part of the query instead of post query
-        return MeterFilters(obj).get_latest_consumption()
+        return MeterFilters(obj).get_latest_consumption().interval_start
 
 
 class MeterAdminView(ModelAdmin):
@@ -107,7 +107,7 @@ class MeterAdminView(ModelAdmin):
     @classmethod
     def last_reading(cls, obj: models.Meter):
         # TODO(tr) as part of the query instead of post query
-        return MeterFilters(obj).get_latest_consumption()
+        return MeterFilters(obj).get_latest_consumption().interval_start
 
 
 class ConsumptionAdminView(ModelAdmin):

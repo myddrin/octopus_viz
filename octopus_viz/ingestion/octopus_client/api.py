@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime
+from typing import Iterable
 
 import pytz
 import requests
+from django.db import IntegrityError, transaction
 from requests.auth import HTTPBasicAuth
 
 from ingestion import models
-
-
-logger = logging.getLogger(__name__)
 
 
 class OctopusAPI:
@@ -32,31 +31,49 @@ class OctopusAPI:
             raise ValueError(f'Unexpected tz unaware {field} from octopus')
         return octopus_datetime.astimezone(pytz.UTC)
 
-    def __init__(self, meter: models.Meter):
+    def __init__(self, meter: models.Meter, *, logger: logging.Logger | None = None, update_existing: bool = True):
         self.meter = meter
         self.session = requests.Session()
         self.session.auth = HTTPBasicAuth(self.meter.api_key, '')
         self.consumption_endpoint = self.build_consumption_endpoint(self.meter)
+        if logger is None:
+            logger = logging.getLogger(__name__)
+        self.logger = logger
+        self.update_existing = update_existing
 
     def build_consumption_from_json(self, data: dict) -> models.Consumption:
+        self.logger.debug(f'Building row from {data=}')
         interval_start = self.handle_datetime(data, 'interval_start')
         interval_end = self.handle_datetime(data, 'interval_end')
         consumption = float(data.pop('consumption'))
         # TODO(tr) warning for unexpected fields?
 
-        obj = models.Consumption.objects.create(
-            consumption=consumption,
-            interval_start=interval_start,
-            interval_end=interval_end,
-            meter=self.meter,
-        )
-        return obj
+        try:
+            with transaction.atomic():
+                return models.Consumption.objects.create(
+                    consumption=consumption,
+                    interval_start=interval_start,
+                    interval_end=interval_end,
+                    meter=self.meter,
+                )
+        except IntegrityError:
+            if not self.update_existing:
+                raise
+            existing_row = models.Consumption.objects.filter(
+                interval_start=interval_start,
+                interval_end=interval_end,
+                meter=self.meter,
+            ).first()
+            self.logger.debug(f'  Updating {existing_row} from {existing_row.consumption}->{consumption}')
+            existing_row.consumption = consumption
+            existing_row.save()
+            return existing_row
 
     def get_consumption_data(
         self,
         period_from: datetime = None,
         period_to: datetime = None,
-    ) -> int:
+    ) -> Iterable[dict]:
         if period_to is not None and period_from is None:
             raise ValueError('period_from has to be specified when using period_to')
 
@@ -70,9 +87,8 @@ class OctopusAPI:
         req.prepare_url(self.consumption_endpoint, params)
         endpoint = req.url
 
-        logger.info(f'Getting data for {self.meter.serial=} for {period_from=} {period_to=}')
+        self.logger.info(f'Getting data for {self.meter.serial=} for {period_from=} {period_to=}')
         pages = 0
-        loaded = 0
         while endpoint is not None:
             response = self.session.get(endpoint)
             response.raise_for_status()
@@ -82,12 +98,10 @@ class OctopusAPI:
             # For most cases this could be a list,
             # but we may want to support pagination in the future
             for result in data['results']:
-                consumption = self.build_consumption_from_json(result)
-                consumption.update_rate()
-                loaded += 1
+                yield result
+                # consumption.update_rate()
 
             endpoint = data.get('next')
             pages += 1
 
-        logger.info(f'Gathered {pages} pages of data for {self.meter.serial=} for {period_from=} {period_to=}')
-        return loaded
+        self.logger.info(f'Gathered {pages} pages of data for {self.meter.serial=} for {period_from=} {period_to=}')

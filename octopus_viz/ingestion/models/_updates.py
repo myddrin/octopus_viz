@@ -20,13 +20,14 @@ class UpdateConsumption:
             logger = logging.getLogger(__name__)
         self.logger = logger
         self.pretend = pretend
+        self.detached_rows: dict[DetachedKey, DetachedValues] = {}
 
     @classmethod
     def all_rows(cls) -> QuerySet:
         return Consumption.objects.select_for_update()
 
     @classmethod
-    def detached_rows(cls, query: QuerySet | None) -> QuerySet:
+    def gather_detached_rows(cls, query: QuerySet | None) -> QuerySet:
         """
         select * from ingestion_consumption where rate_id is null;
 
@@ -91,9 +92,9 @@ class UpdateConsumption:
 
         return no_rates
 
-    def _update_detached_rows(self, detached_rows: dict[DetachedKey, DetachedValues]) -> int:
+    def update_detached_rows(self) -> int:
         no_rates = 0
-        for key, rows in detached_rows.items():
+        for key, rows in self.detached_rows.items():
             rates: list[Rate] = list(self.related_rates(key[0], key[1], key[2]))
             if not rates:
                 tariff = self.related_tariff(key[0], key[1], key[2])
@@ -123,26 +124,34 @@ class UpdateConsumption:
                     )
                 no_rates += n
 
+        self.detached_rows = {}
         return no_rates
 
-    def update_rows(self, all_rows=False):
+    @classmethod
+    def build_row_key(cls, row: Consumption) -> DetachedKey:
+        return row.interval_start.date(), row.interval_end.date(), row.meter.mpan.direction
+
+    def add_detached_row(self, row: Consumption):
+        key = self.build_row_key(row)
+        self.detached_rows.setdefault(key, [])
+        self.detached_rows[key].append(row)
+
+    def gather_and_update_rows(self, all_rows=False):
         with transaction.atomic():
             # TODO(tr) I would really like to do the select with a single query...
-            detached_rows: dict[DetachedKey, DetachedValues] = {}
+            self.detached_rows = {}
             if all_rows:
                 self.logger.info('Updating all consumption rows...')
                 consider_rows = self.all_rows()
             else:
                 self.logger.info('Updating detached consumption rows...')
-                consider_rows = self.detached_rows()
+                consider_rows = self.gather_detached_rows()
 
             found = 0
             for row in consider_rows:  # type: Consumption
-                key = row.interval_start.date(), row.interval_end.date(), row.meter.mpan.direction
-                detached_rows.setdefault(key, [])
-                detached_rows[key].append(row)
+                self.add_detached_row(row)
                 found += 1
 
             self.logger.info(f'  Found {found} rows to update')
-            no_rates = self._update_detached_rows(detached_rows)
+            no_rates = self.update_detached_rows()
             self.logger.info(f'  Updated {found - no_rates} with rates ({no_rates} did not have rates)')

@@ -1,25 +1,7 @@
 from django.core.management import BaseCommand
 
+from ._utils import CommandAsLogger
 from ingestion.models import UpdateConsumption
-
-
-class CommandAsLogger:
-    """A very brittle Logger interface"""
-
-    def __init__(self, command: BaseCommand):
-        self._command = command
-
-    def info(self, *args, **kwargs):
-        self._command.stdout.write(*args, **kwargs)
-
-    def warning(self, *args, **kwargs):
-        self._command.stdout.write(*args, **kwargs)
-
-    def error(self, *args, **kwargs):
-        self._command.stderr.write(*args, **kwargs)
-
-    def exception(self, *args, **kwargs):
-        self._command.stderr.write(*args, **kwargs)
 
 
 class Command(BaseCommand):
@@ -39,4 +21,4 @@ class Command(BaseCommand):
             pretend=pretend,
         )
 
-        update.update_rows(all_rows)
+        update.gather_and_update_rows(all_rows)
