@@ -63,9 +63,47 @@ Alternatively there is a command in the [manage.py](octopus_viz/manage.py) to im
 
 Afterwards visit http://127.0.0.1:8000/
 
+## Manual commands
+
+The manual commands are available in the `[ingestion]` block with 
+```bash
+python manage.py --help
+```
+
+Each command has more details when running with `--help`.
+
+Note: there are commands to import data from the file format but so far no commands to export to it from the database.
+
+### File ingestion
+
+To ingest cache files use `cache_ingestion`
+```bash
+python manage.py cache_ingestion [--create-missing-meter] file_path [file_path ...]
+```
+the files are expected to be in the cache file format described in the appendix.
+
+
+To ingest configuration use `config_ingestion`
+```bash
+python manage.py config_ingestion file_path [file_path ...]
+```
+the files are expected to be the config file file format described in the appendix.
+
+### Get data from Octopus
+
+To get data from Octopus about a particular MPAN use
+```bash
+python manage.py data_ingestion [--period-from PERIOD_FROM] [--period-to PERIOD_TO] [--meter-mpan METER_MPAN] [--pretend]
+```
+
+To update how the data is linked to a tariff configuration use
+```bash
+python manage.py update_consumption [--all-rows] [--pretend]
+```
+
 # Appendices
 
-## Note: configuration file
+## Configuration file format
 
 The configuration files can be stored in `configs/` as it is part of the `.gitignore`.
 This was the old format for the script version - but can still be used to import configuration with a command line.
@@ -197,6 +235,21 @@ will create:
 ```
 
 The `dto.Tariff` has an optional `valid_from`, `valid_until` range that can be used when tariffs are updated.
+
+## Cache file format
+
+The cache files were created in earlier versions of this tool.
+They used to be named following `<MPAN>_<meter id>_<ISO start date>_<ISO end date>.json`.
+The format is JSON lines (each line being a full JSON block) containing objects:
+
+```json
+{
+  "consumption": "float",
+  "unit": "unit_str",
+  "interval_start": "timestamp ISO format",
+  "interval_end": "timestamp ISO format"
+}
+```
 
 ## Modification to Django `settings.py`
 

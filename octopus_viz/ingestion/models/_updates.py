@@ -5,10 +5,12 @@ from typing import Tuple
 from django.db import transaction
 from django.db.models import QuerySet, Q
 
+from ._meter import Meter
 from ._tariff import Tariff, Rate
 from ._enums import Direction
 from ._consumption import Consumption
-
+from ._filters import MeterFilters
+from ..octopus_client.api import OctopusAPI
 
 DetachedKey = Tuple[date, date, Direction]
 DetachedValues = list[Consumption]
@@ -155,3 +157,56 @@ class UpdateConsumption:
             self.logger.info(f'  Found {found} rows to update')
             no_rates = self.update_detached_rows()
             self.logger.info(f'  Updated {found - no_rates} with rates ({no_rates} did not have rates)')
+
+
+class IngestConsumption:
+    @classmethod
+    def _list_meters(cls, meter_mpan: str | None) -> QuerySet:
+        queryset = MeterFilters.meters_with_api_key()
+        if meter_mpan is not None:
+            queryset = queryset.filter(mpan=meter_mpan)
+        return queryset
+
+    @classmethod
+    def _get_last_entry(cls, meter: Meter) -> date:
+        latest = MeterFilters(meter).get_latest_consumption()
+        if latest is None:
+            raise RuntimeError(f'No latest entry for {meter}')
+        return latest.interval_end.date()
+
+    def __init__(self, logger: logging.Logger | None, *, pretend: bool = False):
+        if logger is None:
+            logger = logging.getLogger(__name__)
+        self.logger = logger
+        self.pretend = pretend
+
+    def ingest(self, period_from: date | None, period_to: date, *, meter_mpan: str | None = None):
+        found_meters = 0
+        update_rows = UpdateConsumption(self.logger)
+        total_rows = 0
+
+        for found_meters, meter in enumerate(self._list_meters(meter_mpan), start=1):  # type: int, models.Meter
+            if period_from is None:
+                period_from = self._get_last_entry(meter)
+
+            api_connection = OctopusAPI(meter)
+
+            self.logger.info(
+                f'Download data for {meter} period_from={period_from.isoformat()} period_to={period_to.isoformat()}',
+            )
+            if self.pretend:
+                self.logger.info(f'PRETEND: download data from: {api_connection.consumption_endpoint}')
+                continue  # skip the actual downloading
+
+            with transaction.atomic():
+                found_rows = 0
+                for found_rows, data in enumerate(api_connection.get_consumption_data(period_from, period_to), start=1):  # type: int, dict
+                    new_row = api_connection.build_consumption_from_json(data)
+                    update_rows.add_detached_row(new_row)
+
+                self.logger.info(f'Attaching {found_rows} rows for {meter}...')
+                no_rate = update_rows.update_detached_rows()
+                self.logger.info(f'Linked {found_rows - no_rate} rows to a rate for {meter}')
+                total_rows += found_rows
+
+        self.logger.info(f'Found {found_meters} meters and downloaded {total_rows} rows')
