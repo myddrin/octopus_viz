@@ -1,0 +1,15 @@
+{% extends "ingestion/base.html" %}
+{% load i18n %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+
+<div class="row">
+<form id="new_flux_form" action="{{ post_url }}" method="post" class="form">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    {% bootstrap_button button_type='submit' content='Add' %}
+</form>
+</div>
+
+{% endblock %}
