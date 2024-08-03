@@ -18,6 +18,8 @@ install:
 format:
 	./scripts/format.sh
 
+lint:
+	./scripts/lint.sh
 
 #tests:
 #	pushd octopus_viz/; \
