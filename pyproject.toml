@@ -19,6 +19,7 @@ pytest-django = "*"
 pytest-random-order = "*"
 ruff = "*"
 changelog_gen = {version="~0.9", extras=["bump-my-version"]}
+pre-commit = "*"
 
 [tool.changelog_gen]
 commit = true
