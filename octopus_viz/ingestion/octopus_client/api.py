@@ -28,7 +28,6 @@ class OctopusAPI:
         octopus_datetime = datetime.fromisoformat(data.pop(field))
         if octopus_datetime.tzinfo is None:
             raise ValueError(f'Unexpected tz unaware {field} from octopus')
-        # return octopus_datetime.astimezone(pytz.UTC)
         return octopus_datetime
 
     def __init__(self, meter: models.Meter, *, logger: logging.Logger | None = None, update_existing: bool = True):

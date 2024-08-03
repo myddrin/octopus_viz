@@ -25,7 +25,7 @@ class Command(BaseCommand):
             '--period-to',
             type=str,
             default=None,
-            help=('Download data ending on that date (YYYY-MM-DD) - exclusive. No date means today.'),
+            help='Download data ending on that date (YYYY-MM-DD) - exclusive. No date means today.',
         )
         parser.add_argument(
             '--meter-mpan',
