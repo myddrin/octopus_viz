@@ -25,7 +25,7 @@ class Command(BaseCommand):
             '--period-to',
             type=str,
             default=None,
-            help=('Download data ending on that date (YYYY-MM-DD) - exclusive.No date means today.'),
+            help=('Download data ending on that date (YYYY-MM-DD) - exclusive. No date means today.'),
         )
         parser.add_argument(
             '--meter-mpan',
@@ -37,6 +37,11 @@ class Command(BaseCommand):
             '--pretend',
             action='store_true',
             help='Do not connect to the Octopus API',
+        )
+        parser.add_argument(
+            '--debug-filename',
+            type=str,
+            help='Save the result from the API to a jsons file instead of to the database.',
         )
 
     @classmethod
@@ -51,12 +56,13 @@ class Command(BaseCommand):
         period_to: str | None = None,
         meter_mpan: str | None = None,
         pretend: bool = False,
+        debug_filename: str | None = None,
         **options,
     ):
         start = self.handle_date(period_from)
         end = self.handle_date(period_to) or timezone.now().date()
 
-        IngestConsumption(CommandAsLogger(self), pretend=pretend).ingest(
+        IngestConsumption(CommandAsLogger(self), pretend=pretend, debug_filename=debug_filename).ingest(
             start,
             end,
             meter_mpan=meter_mpan,

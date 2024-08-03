@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date, time
 from typing import Tuple
@@ -174,11 +175,58 @@ class IngestConsumption:
             raise RuntimeError(f'No latest entry for {meter}')
         return latest.interval_end.date()
 
-    def __init__(self, logger: logging.Logger | None, *, pretend: bool = False):
+    def __init__(self, logger: logging.Logger | None, *, pretend: bool = False, debug_filename: str | None = None):
         if logger is None:
             logger = logging.getLogger(__name__)
         self.logger = logger
         self.pretend = pretend
+        self.debug_filename = debug_filename
+
+    def _ingest_in_db(
+        self,
+        meter: 'Meter',
+        period_from: date | None,
+        period_to: date | None,
+        *,
+        api_connection: OctopusAPI,
+        update_rows: UpdateConsumption,
+    ) -> int:
+        with transaction.atomic():
+            found_rows = 0
+            for found_rows, data in enumerate(
+                api_connection.get_consumption_data(period_from, period_to),
+                start=1,
+            ):  # type: int, dict
+                new_row = api_connection.build_consumption_from_json(data)
+                update_rows.add_detached_row(new_row)
+
+            self.logger.info(f'Attaching {found_rows} rows for {meter}...')
+            no_rate = update_rows.update_detached_rows()
+            self.logger.info(f'Linked {found_rows - no_rate} rows to a rate for {meter}')
+        return found_rows
+
+    def _append_to_file(
+        self,
+        meter: 'Meter',
+        period_from: date | None,
+        period_to: date | None,
+        *,
+        api_connection: OctopusAPI,
+        filename: str,
+    ) -> int:
+        found_rows = 0
+        self.logger.info(f'Writing results for {meter} into {filename}')
+        with open(filename, 'a') as file:
+            for found_rows, data in enumerate(
+                api_connection.get_consumption_data(period_from, period_to),
+                start=1,
+            ):  # type: int, dict
+                data['mpan'] = meter.mpan.mpan
+                data['serial'] = meter.serial
+                data['direction'] = meter.mpan.direction
+                file.write(json.dumps(data, sort_keys=True) + '\n')
+
+        return found_rows
 
     def ingest(self, period_from: date | None, period_to: date, *, meter_mpan: str | None = None):
         found_meters = 0
@@ -189,24 +237,29 @@ class IngestConsumption:
             if period_from is None:
                 period_from = self._get_last_entry(meter)
 
-            api_connection = OctopusAPI(meter)
+            api_connection = OctopusAPI(meter, logger=self.logger)
 
             self.logger.info(
                 f'Download data for {meter} period_from={period_from.isoformat()} period_to={period_to.isoformat()}',
             )
             if self.pretend:
                 self.logger.info(f'PRETEND: download data from: {api_connection.consumption_endpoint}')
-                continue  # skip the actual downloading
-
-            with transaction.atomic():
-                found_rows = 0
-                for found_rows, data in enumerate(api_connection.get_consumption_data(period_from, period_to), start=1):  # type: int, dict
-                    new_row = api_connection.build_consumption_from_json(data)
-                    update_rows.add_detached_row(new_row)
-
-                self.logger.info(f'Attaching {found_rows} rows for {meter}...')
-                no_rate = update_rows.update_detached_rows()
-                self.logger.info(f'Linked {found_rows - no_rate} rows to a rate for {meter}')
-                total_rows += found_rows
+                # skip the actual downloading
+            elif self.debug_filename is not None:
+                total_rows += self._append_to_file(
+                    meter,
+                    period_from,
+                    period_to,
+                    api_connection=api_connection,
+                    filename=self.debug_filename,
+                )
+            else:
+                total_rows += self._ingest_in_db(
+                    meter,
+                    period_from,
+                    period_to,
+                    api_connection=api_connection,
+                    update_rows=update_rows,
+                )
 
         self.logger.info(f'Found {found_meters} meters and downloaded {total_rows} rows')
