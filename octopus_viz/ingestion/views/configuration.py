@@ -50,4 +50,7 @@ class ProcessOctopusTariffView(View):
                 # TODO(tr) handle finish=None when the tariff had an end date
                 logger.info(f'Finished {finished} on {finish_current_params.valid_until}')
 
+            logger.info('Reassigning rows to new tariff')
+            models.UpdateConsumption(logger).gather_and_update_rows(True)
+
         return redirect(urls.reverse('add_new_flux_form'))

@@ -20,7 +20,7 @@ class NewFluxTariffForm(Form):
     )
     end_date = DateField(
         input_formats=['%Y-%m-%d'],
-        help_text=_('Tariff ends on that date, as YYYY-MM-DD (exclusive)'),
+        help_text=_('Tariff ends on that date, as YYYY-MM-DD (exclusive) - empty means "until forever".'),
         required=False,  # no data is "until forever"
     )
     direction = ChoiceField(
