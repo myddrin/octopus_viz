@@ -2,7 +2,6 @@ import logging
 from datetime import datetime
 from typing import Iterable
 
-import pytz
 import requests
 from django.db import IntegrityError, transaction
 from requests.auth import HTTPBasicAuth
@@ -25,11 +24,11 @@ class OctopusAPI:
 
     @classmethod
     def handle_datetime(cls, data: dict, field: str) -> datetime:
-        """Extract a tz aware datetime from data and return it as a UTC datetime"""
+        """Extract a tz aware datetime from data"""
         octopus_datetime = datetime.fromisoformat(data.pop(field))
         if octopus_datetime.tzinfo is None:
             raise ValueError(f'Unexpected tz unaware {field} from octopus')
-        return octopus_datetime.astimezone(pytz.UTC)
+        return octopus_datetime
 
     def __init__(self, meter: models.Meter, *, logger: logging.Logger | None = None, update_existing: bool = True):
         self.meter = meter
@@ -87,10 +86,13 @@ class OctopusAPI:
         req.prepare_url(self.consumption_endpoint, params)
         endpoint = req.url
 
-        self.logger.info(f'Getting data for {self.meter.serial=} for {period_from=} {period_to=}')
+        self.logger.info(
+            f'Getting data for {self.meter} for period_from={params.get("period_from")} period_to={params.get("period_to")}',
+        )
         pages = 0
         while endpoint is not None:
             response = self.session.get(endpoint)
+            self.logger.debug(f'< Got {response.status_code} from {response.url}')
             response.raise_for_status()
 
             data = response.json()
