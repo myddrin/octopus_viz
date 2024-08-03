@@ -16,11 +16,8 @@ install:
 	$(POETRY_BIN) install --no-dev
 
 format:
-	ruff format --preview octopus_viz
-	ruff check --preview --fix octopus_viz
+	./scripts/format.sh
 
-lint:
-	ruff check --preview octopus_viz
 
 #tests:
 #	pushd octopus_viz/; \
