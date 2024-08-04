@@ -33,12 +33,8 @@ def navbar_menu(request: HttpRequest) -> dict:
                     url=urls.reverse('add_new_flux_form'),
                     label=_('New Flux tariff'),
                 ),
-                SubmenuItem(
-                    url='',   # TODO(tr)
-                    label=_('Get data from Octopus'),
-                ),
             ],
-        )
+        ),
     ]
 
     return {
