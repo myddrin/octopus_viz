@@ -48,7 +48,7 @@ make-migration:
 # Help local deployment
 #
 
-make-admin-user:
+create-admin-user:
 	pushd octopus_viz/; \
 	python manage.py createsuperuser; \
 	popd

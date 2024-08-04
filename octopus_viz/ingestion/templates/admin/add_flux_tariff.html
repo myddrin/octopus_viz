@@ -1,0 +1,36 @@
+{% extends "ingestion/base.html" %}
+{% load i18n %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+
+<div class="row">
+
+{% for card_data in cards %}
+<div class="card" style="width: 18rem">
+    <div class="card-body">
+        <p>{{ card_data.message }}
+        {% if card_data.tag %}
+        <i class="{{ card_data.tag.class }}" style="{{ card_data.tag.css }}"></i>
+        {% endif %}
+        {% if card_data.link %}
+        <a href="{{ card_data.link.url }}" class="{{ card_data.link.class }}">
+            {{ card_data.link.label }}
+        </a>
+        {% endif %}
+        </p>
+    </div>
+</div>
+{% endfor %}
+
+</div>
+
+<div class="row">
+<form id="new_flux_form" action="{{ post_url }}" method="post" class="form">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    {% bootstrap_button button_type='submit' content='Add' %}
+</form>
+</div>
+
+{% endblock %}

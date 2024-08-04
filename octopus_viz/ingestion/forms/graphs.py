@@ -1,11 +1,11 @@
-from django import forms
+from django.forms import DateField, Form, BooleanField
 from django.utils.translation import gettext as _
 
 
-class MonthlyGraphForm(forms.Form):
-    month = forms.DateField(
+class MonthlyGraphForm(Form):
+    month = DateField(
         input_formats=['%Y-%m'],
         help_text=_('The month as YYYY-MM'),
         localize=True,
     )
-    show_price = forms.BooleanField(localize=True, required=False)
+    show_price = BooleanField(localize=True, required=False)
