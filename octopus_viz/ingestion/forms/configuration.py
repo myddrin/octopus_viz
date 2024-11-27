@@ -38,6 +38,7 @@ class NewFluxTariffForm(Form):
     peak_rate = FloatField(min_value=0.0, help_text=_('Price for 1 kwh (4pm to 7pm)'))
     finish_current_tariff = BooleanField(
         initial=True,
+        required=False,
         help_text=_('Finish current tariff on this tariff start date (exclusive)'),
     )
 
