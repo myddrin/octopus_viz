@@ -30,7 +30,7 @@ class UpdateConsumption:
         return Consumption.objects.select_for_update()
 
     @classmethod
-    def gather_detached_rows(cls, query: QuerySet | None) -> QuerySet:
+    def gather_detached_rows(cls, query: QuerySet | None = None) -> QuerySet:
         """
         select * from ingestion_consumption where rate_id is null;
 
@@ -44,7 +44,7 @@ class UpdateConsumption:
         where ingestion_consumption.rate_id is null
 
         but I could not - instead I'll make a select_for_update and rely on the transaction.
-        It's still high inefficient :(
+        It's still highly inefficient :(
         :return:
         """
         if query is None:
@@ -58,12 +58,12 @@ class UpdateConsumption:
         # That did not work anyway
         # return queryset.filter(
         #     tariff__valid_from_lte=F('consumption__interval_start'),
-        #     tariff__valid_until_gt=F('consumption__interval_end'),
+        #     tariff__valid_until_gt=F('consumption__interval_start'),
         # ).values('tariff__id')
         try:
             return Tariff.objects.filter(
                 Q(valid_from__lte=valid_from),
-                Q(valid_until__isnull=True) | Q(valid_until__gte=valid_until),
+                Q(valid_until__isnull=True) | Q(valid_until__gt=valid_from),
                 Q(direction=direction),
             )[0]
         except IndexError:
@@ -75,7 +75,7 @@ class UpdateConsumption:
             Rate.objects.select_related('tariff')
             .filter(
                 Q(tariff__valid_from__lte=valid_from),
-                Q(tariff__valid_until__isnull=True) | Q(tariff__valid_until__gte=valid_until),
+                Q(tariff__valid_until__isnull=True) | Q(tariff__valid_until__gt=valid_from),
                 Q(tariff__direction=direction),
             )
             .order_by('interval_from', 'interval_end')
@@ -123,7 +123,7 @@ class UpdateConsumption:
                 n = self._update_row(detached, tariff, best_rate)
                 if n:  # debug
                     self.logger.info(
-                        f' [{detached.interval_start.time()} ; {detached.interval_end.time()}] has no rate',
+                        f' [{detached.interval_start} ; {detached.interval_end.time()}] has no rate',
                     )
                 no_rates += n
 
@@ -132,7 +132,9 @@ class UpdateConsumption:
 
     @classmethod
     def build_row_key(cls, row: Consumption) -> DetachedKey:
-        return row.interval_start.date(), row.interval_end.date(), row.meter.mpan.direction
+        valid_from = row.interval_start.date()
+        valid_until = row.interval_end.date()
+        return valid_from, valid_until, row.meter.mpan.direction
 
     def add_detached_row(self, row: Consumption):
         key = self.build_row_key(row)
