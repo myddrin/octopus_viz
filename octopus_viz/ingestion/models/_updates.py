@@ -123,7 +123,7 @@ class UpdateConsumption:
                 n = self._update_row(detached, tariff, best_rate)
                 if n:  # debug
                     self.logger.info(
-                        f' [{detached.interval_start} ; {detached.interval_end.time()}] has no rate',
+                        f' [{detached.interval_start.time()} ; {detached.interval_end.time()}] has no rate',
                     )
                 no_rates += n
 
