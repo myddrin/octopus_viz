@@ -12,6 +12,9 @@ Django = "^5.0.3"
 requests = "*"
 pytz = "*"
 django-bootstrap5 = "*"
+uvicorn = "*"
+gunicorn = "*"
+uvicorn-worker = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
