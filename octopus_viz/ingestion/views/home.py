@@ -1,6 +1,7 @@
 import logging
 from typing import Iterable
 
+from django.db.models import Max
 from django.shortcuts import render
 from django.views import View
 from django.utils.translation import gettext as _
@@ -12,6 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class HomeView(View):
+    def _last_entry_card(self) -> Iterable[CardInfo]:
+        last_entries = models.Consumption.objects.values('meter_id').annotate(
+            last_loaded=Max('interval_start'),
+        )
+        for row in last_entries:
+            meter_name = str(models.Meter.objects.get(id=row['meter_id']))
+            when = row['last_loaded'].isoformat()
+            yield CardInfo(_('Last entry for %(meter)s was %(when)s') % dict(meter=meter_name, when=when))
+
     def _consumption_cards(self) -> Iterable[CardInfo]:
         detached_consumption = models.UpdateConsumption.gather_detached_rows(models.Consumption.objects).count()
         if detached_consumption == 0:
@@ -34,9 +44,7 @@ class HomeView(View):
                 yield CardInfo(_('Found %(count)d MPAN without any Meter') % dict(count=no_meter_mpan)).as_warning()
 
     def get(self, request):
-        cards: list[CardInfo] = [
-            # TODO(tr) last entry card? with link to get more from octopus
-        ]
+        cards: list[CardInfo] = list(self._last_entry_card())
         cards.extend(self._consumption_cards())
         cards.extend(self._mpan_cards())
         cards.extend(TariffCardsFactory.electricity_tariff_cards())
