@@ -23,8 +23,8 @@ class CardInfo:
         self.tag = dict(self._warning_style.items())
         return self
 
-    def add_link(self, url: str, html_class: str) -> Self:
-        self.link = {'url': url, 'class': html_class}
+    def add_link(self, url: str, label: str, html_class: str) -> Self:
+        self.link = {'url': url, 'label': label, 'class': html_class}
         return self
 
 
