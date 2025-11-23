@@ -15,7 +15,7 @@ django-bootstrap5 = "25.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "9.0.1"
-pytest-django = "4.8.0"
+pytest-django = "4.11.1"
 pytest-random-order = "1.2.0"
 changelog_gen = {version="~0.9", extras=["bump-my-version"]}
 pre-commit = "4.5.0"
