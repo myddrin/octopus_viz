@@ -8,18 +8,17 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.12"
 
-Django = "^5.0.3"
-requests = "*"
-pytz = "*"
-django-bootstrap5 = "*"
+Django = "5.0.7"
+requests = "2.32.5"
+pytz = "2025.2"  # TODO(tr) switch to timzone
+django-bootstrap5 = "25.3"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-django = "*"
-pytest-random-order = "*"
-ruff = "*"
+pytest = "8.3.2"
+pytest-django = "4.8.0"
+pytest-random-order = "1.2.0"
 changelog_gen = {version="~0.9", extras=["bump-my-version"]}
-pre-commit = "*"
+pre-commit = "4.5.0"
 
 [tool.changelog_gen]
 commit = true
