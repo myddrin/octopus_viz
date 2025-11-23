@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-ruff check --preview octopus_viz
+pre-commit run ruff-check -a

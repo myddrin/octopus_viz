@@ -16,10 +16,10 @@ install:
 	$(POETRY_BIN) install --no-dev
 
 format:
-	./scripts/format.sh
+	@pre-commit run -a
 
 lint:
-	./scripts/lint.sh
+	@pre-commit run ruff-check -a
 
 #tests:
 #	pushd octopus_viz/; \
@@ -27,34 +27,28 @@ lint:
 #	popd
 
 update-db:
-	pushd octopus_viz/; \
-	python manage.py migrate; \
-	popd
+	cd octopus_viz/; python manage.py migrate
 
 #destroy-db:
 #	rm octopus_viz/meter_readings.sqlite3
 
 create-db: update-db
-	pushd octopus_viz/; \
-	python manage.py createsuperuser; \
-	popd
+	cd octopus_viz/; python manage.py createsuperuser
 
 make-migration:
-	pushd octopus_viz/; \
-	python manage.py makemigrations ingestion; \
-	popd
+	pushd octopus_viz/; python manage.py makemigrations ingestion
 
 #
 # Help local deployment
 #
 
 create-admin-user:
-	pushd octopus_viz/; \
-	python manage.py createsuperuser; \
-	popd
+	cd octopus_viz/; python manage.py createsuperuser;
+
+db-shell:
+	cd octopus_viz/; python manage.py dbshell
+
 
 # run the local server using the manage script form django
 run-local:
-	pushd octopus_viz/; \
-	python manage.py runserver; \
-	popd
+	cd octopus_viz/; python manage.py runserver
