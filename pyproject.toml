@@ -14,7 +14,7 @@ pytz = "2025.2"  # TODO(tr) switch to timzone
 django-bootstrap5 = "25.3"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.3.2"
+pytest = "9.0.1"
 pytest-django = "4.8.0"
 pytest-random-order = "1.2.0"
 changelog_gen = {version="~0.9", extras=["bump-my-version"]}
