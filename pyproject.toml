@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.12"
 
-Django = "5.0.7"
+Django = "5.2.8"
 requests = "2.32.5"
 pytz = "2025.2"  # TODO(tr) switch to timzone
 django-bootstrap5 = "25.3"
@@ -17,7 +17,7 @@ django-bootstrap5 = "25.3"
 pytest = "9.0.1"
 pytest-django = "4.11.1"
 pytest-random-order = "1.2.0"
-changelog_gen = {version="~0.9", extras=["bump-my-version"]}
+changelog_gen = {version="~0.13", extras=["bump-my-version"]}
 pre-commit = "4.5.0"
 
 [tool.changelog_gen]
