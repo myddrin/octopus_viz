@@ -24,19 +24,15 @@ pre-commit = "4.5.0"
 commit = true
 release = true
 allow_dirty = false
-
-[tool.bumpversion]
 current_version = "0.2.1"
-commit = true
-tag = true
+allowed_branches = ["master"]
 
-[[tool.bumpversion.files]]
+[[tool.changelog_gen.files]]
 filename = "README.md"
 
-[[tool.bumpversion.files]]
+[[tool.changelog_gen.files]]
 filename = "pyproject.toml"
-search = 'version = "{current_version}"'
-replace = 'version = "{new_version}"'
+pattern = 'version = "{version}"'
 
 [tool.pytest.ini_options]
 addopts = [
