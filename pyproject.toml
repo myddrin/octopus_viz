@@ -1,24 +1,29 @@
-[tool.poetry]
+[project]
 name = "octopus-viz"
 version = "0.2.1"
 description = ""
-authors = ["Thomas Richard <thomrich0@gmail.com>"]
+authors = [{ name = "Thomas Richard", email = "thomrich0@gmail.com" }]
+requires-python = ">=3.12,<3.13"
 readme = "README.md"
+dependencies = [
+    "Django==5.2.8",
+    "requests==2.32.5",
+    "pytz==2025.2",  # TODO(tr) switch to timezone
+    "django-bootstrap5==25.3",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
+[dependency-groups]
+dev = [
+    "pytest==9.0.1",
+    "pytest-django==4.11.1",
+    "pytest-random-order==1.2.0",
+    "changelog_gen==0.13.8",
+    "pre-commit==4.5.0",
+]
 
-Django = "5.2.8"
-requests = "2.32.5"
-pytz = "2025.2"  # TODO(tr) switch to timzone
-django-bootstrap5 = "25.3"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "9.0.1"
-pytest-django = "4.11.1"
-pytest-random-order = "1.2.0"
-changelog_gen = {version="~0.13", extras=["bump-my-version"]}
-pre-commit = "4.5.0"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.changelog_gen]
 commit = true
@@ -38,7 +43,3 @@ pattern = 'version = "{version}"'
 addopts = [
   "--random-order"
 ]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
