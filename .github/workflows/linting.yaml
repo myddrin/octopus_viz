@@ -14,10 +14,9 @@ jobs:
     - name: Install poetry
       shell: bash
       run: |
-        pip install poetry
-        poetry config virtualenvs.in-project true
-        poetry install
+        pip install uv
+        uv sync
     - name: Linting
       shell: bash
       run: |
-        poetry run ./scripts/lint.sh
+        uv run ./scripts/lint.sh
