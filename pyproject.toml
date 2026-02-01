@@ -14,11 +14,11 @@ pytz = "2025.2"  # TODO(tr) switch to timzone
 django-bootstrap5 = "25.3"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "9.0.1"
+pytest = "9.0.2"
 pytest-django = "4.11.1"
 pytest-random-order = "1.2.0"
-changelog_gen = {version="~0.13", extras=["bump-my-version"]}
-pre-commit = "4.5.0"
+changelog_gen = {version="~0.14", extras=["bump-my-version"]}
+pre-commit = "4.5.1"
 
 [tool.changelog_gen]
 commit = true
