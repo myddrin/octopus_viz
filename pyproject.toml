@@ -9,7 +9,7 @@ readme = "README.md"
 python = "^3.12"
 
 Django = "5.2.8"
-requests = "2.32.5"
+requests = "2.33.0"
 pytz = "2025.2"  # TODO(tr) switch to timzone
 django-bootstrap5 = "25.3"
 
